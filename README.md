@@ -1,11 +1,39 @@
-<div align="center">
+# Nova Defense
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+A classic Missile Command style tower defense game built with React, Vite, and Tailwind CSS.
 
-  <h1>Built with AI Studio</h2>
+## Features
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+- **Real-time Gameplay**: Smooth 60FPS canvas-based rendering.
+- **Responsive Design**: Works on various screen sizes.
+- **Multi-language Support**: English and Chinese.
+- **Dynamic Difficulty**: Increasing challenge as you progress.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+## Deployment to Vercel
 
-</div>
+1. **Push to GitHub**:
+   - Create a new repository on GitHub.
+   - Initialize git: `git init`
+   - Add files: `git add .`
+   - Commit: `git commit -m "Initial commit"`
+   - Push: `git remote add origin <your-repo-url>` and `git push -u origin main`
+
+2. **Connect to Vercel**:
+   - Go to [Vercel](https://vercel.com).
+   - Click "Add New" -> "Project".
+   - Import your GitHub repository.
+   - Vercel will automatically detect Vite and configure the build settings.
+   - Click "Deploy".
+
+## Local Development
+
+```bash
+npm install
+npm run dev
+```
+
+## Build for Production
+
+```bash
+npm run build
+```
