@@ -44,7 +44,7 @@ export interface Battery extends Entity {
   maxMissiles: number;
 }
 
-export type GameStatus = 'START' | 'PLAYING' | 'WON' | 'LOST';
+export type GameStatus = 'START' | 'PLAYING' | 'PAUSED' | 'WON' | 'LOST';
 
 export const GAME_CONFIG = {
   WIN_SCORE: 1000,

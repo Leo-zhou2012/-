@@ -5,7 +5,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Skull, Play, RotateCcw, Shield, Languages } from 'lucide-react';
+import { Trophy, Skull, Play, Pause, RotateCcw, Shield, Languages, LogOut } from 'lucide-react';
 import { GameCanvas } from './components/GameCanvas';
 import { GameStatus, Battery } from './types';
 
@@ -13,7 +13,7 @@ type Lang = 'zh' | 'en';
 
 const TRANSLATIONS = {
   en: {
-    title: "Nova Defense",
+    title: "Missile Defense",
     start: "Start Game",
     win: "Mission Accomplished!",
     lose: "Defense Failed",
@@ -26,11 +26,14 @@ const TRANSLATIONS = {
     selectLevel: "Select Level",
     instructions: "Click anywhere to launch interceptors. Protect your cities and batteries.",
     batteries: "Batteries",
-    missiles: "Missiles",
+    remainingRockets: "Rockets Left",
+    pause: "Pause",
+    resume: "Resume",
+    exit: "Exit to Menu",
     lang: "中文"
   },
   zh: {
-    title: "新星防御",
+    title: "导弹防御",
     start: "开始游戏",
     win: "任务完成！",
     lose: "防御失败",
@@ -43,7 +46,10 @@ const TRANSLATIONS = {
     selectLevel: "选择关卡",
     instructions: "点击屏幕发射拦截导弹。保护你的城市和炮台。",
     batteries: "导弹炮台",
-    missiles: "剩余导弹",
+    remainingRockets: "剩余火箭",
+    pause: "暂停",
+    resume: "继续",
+    exit: "退出游戏",
     lang: "English"
   }
 };
@@ -54,6 +60,7 @@ export default function App() {
   const [lang, setLang] = useState<Lang>('zh');
   const [level, setLevel] = useState(1);
   const [batteryStats, setBatteryStats] = useState<number[]>([20, 40, 20]);
+  const [remainingRockets, setRemainingRockets] = useState(50);
 
   const t = TRANSLATIONS[lang];
 
@@ -73,6 +80,10 @@ export default function App() {
     });
   }, []);
 
+  const handleRocketsUpdate = useCallback((count: number) => {
+    setRemainingRockets(count);
+  }, []);
+
   const startGame = () => {
     setScore(0);
     setBatteryStats([20, 40, 20]);
@@ -86,6 +97,11 @@ export default function App() {
   };
 
   const toggleLang = () => setLang(prev => prev === 'zh' ? 'en' : 'zh');
+
+  const togglePause = () => {
+    if (status === 'PLAYING') setStatus('PAUSED');
+    else if (status === 'PAUSED') setStatus('PLAYING');
+  };
 
   const nextLevel = () => {
     if (level < 5) {
@@ -119,10 +135,23 @@ export default function App() {
               <span className="text-white/40 uppercase text-[10px] tracking-widest">{t.level}</span>
               <span className="text-xl text-blue-400">{level}</span>
             </div>
+            <div className="flex flex-col">
+              <span className="text-white/40 uppercase text-[10px] tracking-widest">{t.remainingRockets}</span>
+              <span className="text-xl text-red-400">{remainingRockets}</span>
+            </div>
           </div>
         </div>
 
         <div className="flex gap-2 pointer-events-auto">
+          {(status === 'PLAYING' || status === 'PAUSED') && (
+            <button 
+              onClick={togglePause}
+              className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-2 text-xs"
+            >
+              {status === 'PAUSED' ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
+              {status === 'PAUSED' ? t.resume : t.pause}
+            </button>
+          )}
           <button 
             onClick={toggleLang}
             className="p-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 transition-colors flex items-center gap-2 text-xs"
@@ -141,11 +170,43 @@ export default function App() {
           onScoreUpdate={handleScoreUpdate}
           onGameEnd={handleGameEnd}
           onMissileUpdate={handleMissileUpdate}
+          onRocketsUpdate={handleRocketsUpdate}
         />
 
         {/* Overlays */}
         <AnimatePresence>
-          {status !== 'PLAYING' && (
+          {status === 'PAUSED' && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            >
+              <div className="text-center">
+                <h2 className="text-6xl font-black text-white mb-8 tracking-tighter uppercase italic">
+                  {t.pause}
+                </h2>
+                <div className="flex flex-col gap-4">
+                  <button 
+                    onClick={togglePause}
+                    className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3 mx-auto w-64"
+                  >
+                    <Play className="w-6 h-6" />
+                    {t.resume}
+                  </button>
+                  <button 
+                    onClick={goHome}
+                    className="px-8 py-4 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-bold text-xl transition-all flex items-center justify-center gap-3 mx-auto w-64 border border-white/10"
+                  >
+                    <LogOut className="w-6 h-6" />
+                    {t.exit}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {status !== 'PLAYING' && status !== 'PAUSED' && (
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

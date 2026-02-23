@@ -21,6 +21,7 @@ interface GameCanvasProps {
   onScoreUpdate: (points: number) => void;
   onGameEnd: (won: boolean) => void;
   onMissileUpdate: (batteryIndex: number, count: number) => void;
+  onRocketsUpdate: (count: number) => void;
 }
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({ 
@@ -28,7 +29,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   level,
   onScoreUpdate, 
   onGameEnd, 
-  onMissileUpdate
+  onMissileUpdate,
+  onRocketsUpdate
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -43,12 +45,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const spawnedCountRef = useRef(0);
   const frameRef = useRef<number>(0);
   const mousePosRef = useRef<Point>({ x: 0, y: 0 });
+  const prevStatusRef = useRef<GameStatus>(status);
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
   // Initialize Cities and Batteries
   useEffect(() => {
-    if (status === 'START' || status === 'PLAYING') {
+    if (status === 'START' || (status === 'PLAYING' && prevStatusRef.current !== 'PAUSED')) {
       if (containerRef.current) {
         const { clientWidth, clientHeight } = containerRef.current;
         setDimensions({ width: clientWidth, height: clientHeight });
@@ -80,6 +83,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         spawnedCountRef.current = 0;
       }
     }
+    prevStatusRef.current = status;
   }, [status]);
 
   // Handle resize separately
@@ -376,12 +380,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         return;
       }
 
+      const remainingRockets = (GAME_CONFIG.MAX_ROCKETS - spawnedCountRef.current) + rocketsRef.current.length;
+      onRocketsUpdate(remainingRockets);
+
       frameRef.current = requestAnimationFrame(animate);
     };
 
     frameRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [status, level, onScoreUpdate, onGameEnd]);
+  }, [status, level, onScoreUpdate, onGameEnd, onRocketsUpdate]);
 
   const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
     if (status !== 'PLAYING') return;
