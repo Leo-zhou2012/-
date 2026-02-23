@@ -17,6 +17,7 @@ import {
 
 interface GameCanvasProps {
   status: GameStatus;
+  level: number;
   onScoreUpdate: (points: number) => void;
   onGameEnd: (won: boolean) => void;
   onMissileUpdate: (batteryIndex: number, count: number) => void;
@@ -24,6 +25,7 @@ interface GameCanvasProps {
 
 export const GameCanvas: React.FC<GameCanvasProps> = ({ 
   status, 
+  level,
   onScoreUpdate, 
   onGameEnd, 
   onMissileUpdate
@@ -40,6 +42,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   const scoreRef = useRef(0);
   const spawnedCountRef = useRef(0);
   const frameRef = useRef<number>(0);
+  const mousePosRef = useRef<Point>({ x: 0, y: 0 });
 
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -104,7 +107,12 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       // 1. Spawn Rockets
-      if (spawnedCountRef.current < GAME_CONFIG.MAX_ROCKETS && Math.random() < GAME_CONFIG.SPAWN_RATE) {
+      const levelMultiplier = 1 + (level - 1) * 0.15;
+      const spawnRate = GAME_CONFIG.SPAWN_RATE * levelMultiplier;
+      const rocketSpeedMin = GAME_CONFIG.ROCKET_SPEED_MIN * levelMultiplier;
+      const rocketSpeedMax = GAME_CONFIG.ROCKET_SPEED_MAX * levelMultiplier;
+
+      if (spawnedCountRef.current < GAME_CONFIG.MAX_ROCKETS && Math.random() < spawnRate) {
         const startX = Math.random() * canvas.width;
         const targetTargets = [...citiesRef.current.filter(c => c.active), ...batteriesRef.current.filter(b => b.active)];
         if (targetTargets.length > 0) {
@@ -115,7 +123,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
             start: { x: startX, y: 0 },
             pos: { x: startX, y: 0 },
             target: { x: target.pos.x, y: target.pos.y },
-            speed: GAME_CONFIG.ROCKET_SPEED_MIN + Math.random() * (GAME_CONFIG.ROCKET_SPEED_MAX - GAME_CONFIG.ROCKET_SPEED_MIN),
+            speed: rocketSpeedMin + Math.random() * (rocketSpeedMax - rocketSpeedMin),
             progress: 0
           });
         }
@@ -217,56 +225,108 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       // Draw Batteries
       batteriesRef.current.forEach(battery => {
         if (!battery.active) return;
+        
+        // Base
+        ctx.fillStyle = '#1e40af'; // Blue 800
+        ctx.beginPath();
+        ctx.roundRect(battery.pos.x - 25, battery.pos.y + 10, 50, 15, 4);
+        ctx.fill();
+        
+        // Turret Dome
         ctx.fillStyle = '#3b82f6'; // Blue 500
         ctx.beginPath();
-        ctx.moveTo(battery.pos.x - 20, battery.pos.y + 20);
-        ctx.lineTo(battery.pos.x + 20, battery.pos.y + 20);
-        ctx.lineTo(battery.pos.x, battery.pos.y - 10);
-        ctx.closePath();
+        ctx.arc(battery.pos.x, battery.pos.y + 10, 18, Math.PI, 0);
         ctx.fill();
+        
+        // Barrel (Rotating)
+        const angle = Math.atan2(mousePosRef.current.y - (battery.pos.y + 10), mousePosRef.current.x - battery.pos.x);
+        
+        ctx.save();
+        ctx.translate(battery.pos.x, battery.pos.y + 10);
+        ctx.rotate(angle);
+        
+        ctx.strokeStyle = '#94a3b8'; // Slate 400
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(25, 0); // Barrel length
+        ctx.stroke();
+        
+        // Barrel Tip
+        ctx.fillStyle = '#1e293b'; // Slate 800
+        ctx.fillRect(22, -2, 6, 4);
+        
+        ctx.restore();
         
         // Draw missile count
         ctx.fillStyle = 'white';
-        ctx.font = '10px JetBrains Mono';
+        ctx.font = 'bold 12px JetBrains Mono';
         ctx.textAlign = 'center';
-        ctx.fillText(battery.missiles.toString(), battery.pos.x, battery.pos.y + 35);
+        ctx.fillText(battery.missiles.toString(), battery.pos.x, battery.pos.y + 40);
       });
 
       // Draw Rockets
       rocketsRef.current.forEach(rocket => {
         // Trail
-        ctx.strokeStyle = '#ef4444'; // Red 500
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.3)'; // Subtle red trail
         ctx.lineWidth = 1;
-        ctx.setLineDash([2, 2]); // Dotted trail for rockets
         ctx.beginPath();
         ctx.moveTo(rocket.start.x, rocket.start.y);
         ctx.lineTo(rocket.pos.x, rocket.pos.y);
         ctx.stroke();
-        ctx.setLineDash([]); // Reset dash
 
-        // Warhead (the head of the rocket)
         const angle = Math.atan2(rocket.target.y - rocket.start.y, rocket.target.x - rocket.start.x);
         
         ctx.save();
         ctx.translate(rocket.pos.x, rocket.pos.y);
         ctx.rotate(angle);
         
-        // Rocket body/head shape
-        ctx.fillStyle = '#f87171'; // Red 400
+        // Missile Body
+        ctx.fillStyle = '#94a3b8'; // Slate 400 (Metallic grey)
+        ctx.fillRect(-8, -2, 10, 4);
+        
+        // Nose Cone
+        ctx.fillStyle = '#ef4444'; // Red 500
         ctx.beginPath();
-        ctx.moveTo(5, 0); // Tip
-        ctx.lineTo(-3, -3);
-        ctx.lineTo(-3, 3);
+        ctx.moveTo(2, -2);
+        ctx.lineTo(8, 0);
+        ctx.lineTo(2, 2);
         ctx.closePath();
         ctx.fill();
         
-        // Glow effect for the warhead
-        ctx.shadowBlur = 5;
-        ctx.shadowColor = '#ef4444';
-        ctx.fillStyle = '#ffffff';
+        // Tail Fins
+        ctx.fillStyle = '#475569'; // Slate 600
         ctx.beginPath();
-        ctx.arc(0, 0, 1.5, 0, Math.PI * 2);
+        ctx.moveTo(-8, -2);
+        ctx.lineTo(-12, -5);
+        ctx.lineTo(-5, -2);
+        ctx.closePath();
         ctx.fill();
+        
+        ctx.beginPath();
+        ctx.moveTo(-8, 2);
+        ctx.lineTo(-12, 5);
+        ctx.lineTo(-5, 2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Engine Flame (Animated)
+        if (Math.random() > 0.1) {
+          ctx.fillStyle = Math.random() > 0.5 ? '#fbbf24' : '#f59e0b'; // Amber/Orange
+          ctx.beginPath();
+          ctx.moveTo(-8, -1.5);
+          ctx.lineTo(-16 - Math.random() * 8, 0);
+          ctx.lineTo(-8, 1.5);
+          ctx.closePath();
+          ctx.fill();
+          
+          // Flame Glow
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#f59e0b';
+          ctx.fill();
+        }
+        
         ctx.restore();
         ctx.shadowBlur = 0; // Reset shadow
       });
@@ -303,12 +363,15 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       });
 
       // 6. Check Win/Loss
-      if (scoreRef.current >= GAME_CONFIG.WIN_SCORE) {
+      const allRocketsSpawned = spawnedCountRef.current >= GAME_CONFIG.MAX_ROCKETS;
+      const noRocketsLeft = rocketsRef.current.length === 0;
+
+      if (scoreRef.current >= GAME_CONFIG.WIN_SCORE || (allRocketsSpawned && noRocketsLeft)) {
         onGameEnd(true);
         return;
       }
 
-      if (batteriesRef.current.every(b => !b.active)) {
+      if (batteriesRef.current.every(b => !b.active || b.missiles <= 0) || citiesRef.current.every(c => !c.active)) {
         onGameEnd(false);
         return;
       }
@@ -318,7 +381,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
 
     frameRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frameRef.current);
-  }, [status, onScoreUpdate, onGameEnd]);
+  }, [status, level, onScoreUpdate, onGameEnd]);
 
   const handleCanvasClick = (e: React.MouseEvent | React.TouchEvent) => {
     if (status !== 'PLAYING') return;
@@ -371,6 +434,16 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     }
   };
 
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    mousePosRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+  };
+
   return (
     <div ref={containerRef} className="w-full h-full relative bg-slate-950">
       <canvas
@@ -379,6 +452,7 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
         height={dimensions.height}
         onMouseDown={handleCanvasClick}
         onTouchStart={handleCanvasClick}
+        onMouseMove={handleMouseMove}
         className="block w-full h-full cursor-crosshair"
       />
       

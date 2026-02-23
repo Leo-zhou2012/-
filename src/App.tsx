@@ -20,7 +20,10 @@ const TRANSLATIONS = {
     score: "Score",
     target: "Target",
     restart: "Play Again",
+    nextLevel: "Next Level",
     home: "Back to Home",
+    level: "Level",
+    selectLevel: "Select Level",
     instructions: "Click anywhere to launch interceptors. Protect your cities and batteries.",
     batteries: "Batteries",
     missiles: "Missiles",
@@ -34,7 +37,10 @@ const TRANSLATIONS = {
     score: "得分",
     target: "目标",
     restart: "再玩一次",
+    nextLevel: "下一关",
     home: "回到主界面",
+    level: "关卡",
+    selectLevel: "选择关卡",
     instructions: "点击屏幕发射拦截导弹。保护你的城市和炮台。",
     batteries: "导弹炮台",
     missiles: "剩余导弹",
@@ -46,6 +52,7 @@ export default function App() {
   const [status, setStatus] = useState<GameStatus>('START');
   const [score, setScore] = useState(0);
   const [lang, setLang] = useState<Lang>('zh');
+  const [level, setLevel] = useState(1);
   const [batteryStats, setBatteryStats] = useState<number[]>([20, 40, 20]);
 
   const t = TRANSLATIONS[lang];
@@ -80,6 +87,16 @@ export default function App() {
 
   const toggleLang = () => setLang(prev => prev === 'zh' ? 'en' : 'zh');
 
+  const nextLevel = () => {
+    if (level < 5) {
+      const nextLvl = level + 1;
+      setLevel(nextLvl);
+      setScore(0);
+      setBatteryStats([20, 40, 20]);
+      setStatus('PLAYING');
+    }
+  };
+
   return (
     <div className="fixed inset-0 flex flex-col bg-black overflow-hidden font-sans select-none">
       {/* Header UI */}
@@ -97,6 +114,10 @@ export default function App() {
             <div className="flex flex-col">
               <span className="text-white/40 uppercase text-[10px] tracking-widest">{t.target}</span>
               <span className="text-xl text-white/60">1000</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-white/40 uppercase text-[10px] tracking-widest">{t.level}</span>
+              <span className="text-xl text-blue-400">{level}</span>
             </div>
           </div>
         </div>
@@ -116,6 +137,7 @@ export default function App() {
       <div className="flex-1 relative">
         <GameCanvas 
           status={status}
+          level={level}
           onScoreUpdate={handleScoreUpdate}
           onGameEnd={handleGameEnd}
           onMissileUpdate={handleMissileUpdate}
@@ -144,6 +166,26 @@ export default function App() {
                     <p className="text-slate-400 mb-8 leading-relaxed">
                       {t.instructions}
                     </p>
+
+                    <div className="mb-8">
+                      <p className="text-xs uppercase tracking-widest text-white/40 mb-3">{t.selectLevel}</p>
+                      <div className="flex justify-center gap-2">
+                        {[1, 2, 3, 4, 5].map(l => (
+                          <button
+                            key={l}
+                            onClick={() => setLevel(l)}
+                            className={`w-10 h-10 rounded-xl font-bold transition-all ${
+                              level === l 
+                                ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' 
+                                : 'bg-white/5 text-white/40 hover:bg-white/10'
+                            }`}
+                          >
+                            {l}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
                     <button 
                       onClick={startGame}
                       className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-2 group"
@@ -164,6 +206,15 @@ export default function App() {
                       {t.score}: <span className="text-white font-mono">{score}</span>
                     </p>
                     <div className="flex flex-col gap-3">
+                      {level < 5 && (
+                        <button 
+                          onClick={nextLevel}
+                          className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-2"
+                        >
+                          <Play className="w-5 h-5" />
+                          {t.nextLevel}
+                        </button>
+                      )}
                       <button 
                         onClick={startGame}
                         className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-2"
